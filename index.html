@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心臟模型剖切檢視器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            color: white;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 280px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #ffffff;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .value-display {
+            min-width: 50px;
+            text-align: right;
+            font-family: monospace;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        #fileInput {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #4CAF50;
+            border-radius: 5px;
+            background: rgba(76, 175, 80, 0.1);
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #fileInput:hover {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: #66BB6A;
+        }
+
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #ccc;
+            max-width: 300px;
+        }
+
+        #loadingIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .spinner {
+            border: 3px solid #333;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 5px;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #66BB6A;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <div class="control-group">
+                <label>載入心臟 STL 檔案:</label>
+                <input type="file" id="fileInput" accept=".stl" />
+            </div>
+            
+            <div class="control-group">
+                <label>X軸剖切:</label>
+                <div class="slider-container">
+                    <input type="range" id="clipX" min="-25" max="25" step="0.1" value="0" />
+                    <span class="value-display" id="clipXValue">0.0</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Y軸剖切:</label>
+                <div class="slider-container">
+                    <input type="range" id="clipY" min="-25" max="25" step="0.1" value="0" />
+                    <span class="value-display" id="clipYValue">0.0</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Z軸剖切:</label>
+                <div class="slider-container">
+                    <input type="range" id="clipZ" min="-25" max="25" step="0.1" value="0" />
+                    <span class="value-display" id="clipZValue">0.0</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="enableClipping" checked />
+                    <label for="enableClipping">啟用剖切</label>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="showPlanes" />
+                    <label for="showPlanes">顯示剖切平面</label>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="wireframe" />
+                    <label for="wireframe">線框模式</label>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <button onclick="resetView()">重置視角</button>
+                <button onclick="resetClipping()">重置剖切</button>
+            </div>
+        </div>
+
+        <div id="loadingIndicator">
+            <div class="spinner"></div>
+            <div>載入模型中...</div>
+        </div>
+
+        <div class="info">
+            <strong>操作說明:</strong><br>
+            • 滑鼠左鍵拖拽: 旋轉視角<br>
+            • 滑鼠右鍵拖拽: 平移視角<br>
+            • 滾輪: 縮放<br>
+            • 使用滑條調整剖切平面位置<br>
+            • 支援 STL 格式的心臟模型檔案
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, controls;
+        let heartMesh, clippingPlanes = [];
+        let planeHelpers = [];
+        
+        // 初始化場景
+        function init() {
+            // 創建場景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x263238);
+            
+            // 創建相機
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 100);
+            
+            // 創建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.localClippingEnabled = true;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('container').appendChild(renderer.domElement);
+            
+            // 創建軌道控制器
+            createOrbitControls();
+            
+            // 創建剖切平面
+            createClippingPlanes();
+            
+            // 添加光源
+            addLights();
+            
+            // 設置事件監聽器
+            setupEventListeners();
+            
+            // 創建默認的心臟幾何體（如果沒有加載STL文件）
+            createDefaultHeart();
+            
+            // 開始渲染循環
+            animate();
+        }
+        
+        function createOrbitControls() {
+            // 簡化的軌道控制實現
+            let isMouseDown = false;
+            let mouseButton = 0;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('mousedown', (event) => {
+                isMouseDown = true;
+                mouseButton = event.button;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                isMouseDown = false;
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (event) => {
+                if (!isMouseDown) return;
+                
+                const deltaMove = {
+                    x: event.clientX - previousMousePosition.x,
+                    y: event.clientY - previousMousePosition.y
+                };
+                
+                if (mouseButton === 0) { // 左鍵旋轉
+                    const spherical = new THREE.Spherical();
+                    spherical.setFromVector3(camera.position);
+                    spherical.theta -= deltaMove.x * 0.01;
+                    spherical.phi -= deltaMove.y * 0.01;
+                    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                    camera.position.setFromSpherical(spherical);
+                    camera.lookAt(0, 0, 0);
+                } else if (mouseButton === 2) { // 右鍵平移
+                    const factor = camera.position.length() * 0.001;
+                    camera.position.x -= deltaMove.x * factor;
+                    camera.position.y += deltaMove.y * factor;
+                }
+                
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            });
+            
+            renderer.domElement.addEventListener('wheel', (event) => {
+                const factor = event.deltaY > 0 ? 1.1 : 0.9;
+                camera.position.multiplyScalar(factor);
+            });
+            
+            renderer.domElement.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+            });
+        }
+        
+        function createClippingPlanes() {
+            clippingPlanes = [
+                new THREE.Plane(new THREE.Vector3(1, 0, 0), 0),
+                new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
+                new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+            ];
+            
+            // 創建平面輔助顯示
+            planeHelpers = clippingPlanes.map((plane, index) => {
+                const helper = new THREE.PlaneHelper(plane, 50, [0xff0000, 0x00ff00, 0x0000ff][index]);
+                helper.visible = false;
+                scene.add(helper);
+                return helper;
+            });
+        }
+        
+        function addLights() {
+            // 環境光
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            // 主光源
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // 補光
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            fillLight.position.set(-50, -50, -50);
+            scene.add(fillLight);
+        }
+        
+        function createDefaultHeart() {
+            // 創建一個類似心臟形狀的幾何體作為示例
+            const heartGeometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            
+            // 簡化的心臟形狀生成
+            for (let i = 0; i < 100; i++) {
+                for (let j = 0; j < 100; j++) {
+                    const u = (i / 99) * Math.PI * 2;
+                    const v = (j / 99) * Math.PI;
+                    
+                    // 心臟參數方程
+                    const x = 16 * Math.sin(u) ** 3;
+                    const y = 13 * Math.cos(u) - 5 * Math.cos(2*u) - 2 * Math.cos(3*u) - Math.cos(4*u);
+                    const z = Math.sin(v) * 10;
+                    
+                    vertices.push(x, y, z);
+                    
+                    // 簡單法向量計算
+                    const normal = new THREE.Vector3(x, y, z).normalize();
+                    normals.push(normal.x, normal.y, normal.z);
+                }
+            }
+            
+            heartGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            heartGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            
+            const material = new THREE.MeshLambertMaterial({
+                color: 0xff6b6b,
+                side: THREE.DoubleSide,
+                clippingPlanes: clippingPlanes
+            });
+            
+            heartMesh = new THREE.Points(heartGeometry, material);
+            scene.add(heartMesh);
+        }
+        
+        function loadSTL(file) {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const contents = event.target.result;
+                    const geometry = parseSTL(contents);
+                    
+                    // 移除舊的模型
+                    if (heartMesh) {
+                        scene.remove(heartMesh);
+                    }
+                    
+                    // 計算幾何體邊界框以便正確縮放
+                    geometry.computeBoundingBox();
+                    const box = geometry.boundingBox;
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 50 / maxDim; // 縮放到合適大小
+                    
+                    // 居中幾何體
+                    const center = box.getCenter(new THREE.Vector3());
+                    geometry.translate(-center.x, -center.y, -center.z);
+                    geometry.scale(scale, scale, scale);
+                    
+                    // 計算法向量
+                    geometry.computeVertexNormals();
+                    
+                    // 創建材質
+                    const material = new THREE.MeshLambertMaterial({
+                        color: 0xff6b6b,
+                        side: THREE.DoubleSide,
+                        clippingPlanes: clippingPlanes
+                    });
+                    
+                    // 創建網格
+                    heartMesh = new THREE.Mesh(geometry, material);
+                    heartMesh.castShadow = true;
+                    heartMesh.receiveShadow = true;
+                    scene.add(heartMesh);
+                    
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    
+                } catch (error) {
+                    console.error('STL 檔案載入錯誤:', error);
+                    alert('載入 STL 檔案時發生錯誤，請確認檔案格式正確。');
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function parseSTL(buffer) {
+            const dataView = new DataView(buffer);
+            
+            // 檢查是否為二進制STL（前80字節是標題，第81-84字節是三角形數量）
+            if (buffer.byteLength > 84) {
+                const triangleCount = dataView.getUint32(80, true);
+                const expectedSize = 80 + 4 + triangleCount * 50;
+                
+                if (buffer.byteLength >= expectedSize) {
+                    return parseBinarySTL(dataView, triangleCount);
+                }
+            }
+            
+            // 如果不是二進制STL，嘗試解析為ASCII STL
+            const text = new TextDecoder().decode(buffer);
+            return parseAsciiSTL(text);
+        }
+        
+        function parseBinarySTL(dataView, triangleCount) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            
+            let offset = 84; // 跳過標題和三角形數量
+            
+            for (let i = 0; i < triangleCount; i++) {
+                // 法向量
+                const nx = dataView.getFloat32(offset, true);
+                const ny = dataView.getFloat32(offset + 4, true);
+                const nz = dataView.getFloat32(offset + 8, true);
+                
+                // 三個頂點
+                for (let j = 0; j < 3; j++) {
+                    const vertexOffset = offset + 12 + j * 12;
+                    const x = dataView.getFloat32(vertexOffset, true);
+                    const y = dataView.getFloat32(vertexOffset + 4, true);
+                    const z = dataView.getFloat32(vertexOffset + 8, true);
+                    
+                    vertices.push(x, y, z);
+                    normals.push(nx, ny, nz);
+                }
+                
+                offset += 50; // 每個三角形佔50字節
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            
+            return geometry;
+        }
+        
+        function parseAsciiSTL(text) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            
+            const lines = text.split('\n');
+            let currentNormal = null;
+            
+            for (let line of lines) {
+                line = line.trim();
+                
+                if (line.startsWith('facet normal')) {
+                    const parts = line.split(/\s+/);
+                    currentNormal = [
+                        parseFloat(parts[2]),
+                        parseFloat(parts[3]),
+                        parseFloat(parts[4])
+                    ];
+                } else if (line.startsWith('vertex')) {
+                    const parts = line.split(/\s+/);
+                    vertices.push(
+                        parseFloat(parts[1]),
+                        parseFloat(parts[2]),
+                        parseFloat(parts[3])
+                    );
+                    if (currentNormal) {
+                        normals.push(...currentNormal);
+                    }
+                }
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            if (normals.length > 0) {
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            }
+            
+            return geometry;
+        }
+        
+        function setupEventListeners() {
+            // 檔案輸入
+            document.getElementById('fileInput').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file && file.name.toLowerCase().endsWith('.stl')) {
+                    loadSTL(file);
+                }
+            });
+            
+            // 剖切控制
+            ['clipX', 'clipY', 'clipZ'].forEach((id, index) => {
+                const slider = document.getElementById(id);
+                const valueDisplay = document.getElementById(id + 'Value');
+                
+                slider.addEventListener('input', () => {
+                    const value = parseFloat(slider.value);
+                    valueDisplay.textContent = value.toFixed(1);
+                    clippingPlanes[index].constant = value;
+                });
+            });
+            
+            // 啟用/停用剖切
+            document.getElementById('enableClipping').addEventListener('change', (event) => {
+                if (heartMesh) {
+                    heartMesh.material.clippingPlanes = event.target.checked ? clippingPlanes : [];
+                }
+            });
+            
+            // 顯示剖切平面
+            document.getElementById('showPlanes').addEventListener('change', (event) => {
+                planeHelpers.forEach(helper => {
+                    helper.visible = event.target.checked;
+                });
+            });
+            
+            // 線框模式
+            document.getElementById('wireframe').addEventListener('change', (event) => {
+                if (heartMesh) {
+                    heartMesh.material.wireframe = event.target.checked;
+                }
+            });
+            
+            // 視窗大小調整
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function resetView() {
+            camera.position.set(0, 0, 100);
+            camera.lookAt(0, 0, 0);
+        }
+        
+        function resetClipping() {
+            ['clipX', 'clipY', 'clipZ'].forEach((id, index) => {
+                const slider = document.getElementById(id);
+                const valueDisplay = document.getElementById(id + 'Value');
+                slider.value = 0;
+                valueDisplay.textContent = '0.0';
+                clippingPlanes[index].constant = 0;
+            });
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        init();
+    </script>
+</body>
+</html>

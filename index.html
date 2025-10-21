@@ -263,6 +263,7 @@
             renderer.localClippingEnabled = true;
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.shadowMap.autoUpdate = true;
             document.getElementById('container').appendChild(renderer.domElement);
             
             // 創建軌道控制器
@@ -273,7 +274,10 @@
             
             // 添加光源
             addLights();
-            
+
+            // 添加地板
+            addFloor();
+
             // 設置事件監聽器
             setupEventListeners();
             
@@ -311,15 +315,26 @@
                 if (mouseButton === 0) { // 左鍵旋轉
                     const spherical = new THREE.Spherical();
                     spherical.setFromVector3(camera.position);
-                    spherical.theta -= deltaMove.x * 0.01;
-                    spherical.phi -= deltaMove.y * 0.01;
+                    spherical.theta -= deltaMove.x * 0.005;
+                    spherical.phi -= deltaMove.y * 0.005;
                     spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
                     camera.position.setFromSpherical(spherical);
                     camera.lookAt(0, 0, 0);
-                } else if (mouseButton === 2) { // 右鍵平移
+                } else if (mouseButton === 2) { // 右鍵平移（相對於視角）
                     const factor = camera.position.length() * 0.001;
-                    camera.position.x -= deltaMove.x * factor;
-                    camera.position.y += deltaMove.y * factor;
+
+                    // 獲取相機的局部座標系向量
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3();
+                    const forward = new THREE.Vector3();
+
+                    // 更新相機矩陣並提取基向量
+                    camera.updateMatrixWorld();
+                    camera.matrix.extractBasis(right, up, forward);
+
+                    // 根據滑鼠移動，沿著相機的局部X軸和Y軸移動
+                    camera.position.addScaledVector(right, -deltaMove.x * factor);
+                    camera.position.addScaledVector(up, deltaMove.y * factor);
                 }
                 
                 previousMousePosition = { x: event.clientX, y: event.clientY };
@@ -344,7 +359,7 @@
             
             // 創建平面輔助顯示
             planeHelpers = clippingPlanes.map((plane, index) => {
-                const helper = new THREE.PlaneHelper(plane, 50, [0xff0000, 0x00ff00, 0x0000ff][index]);
+                const helper = new THREE.PlaneHelper(plane, 50, [0xFF7043, 0x26A69A, 0x7986CB][index]);
                 helper.visible = false;
                 scene.add(helper);
                 return helper;
@@ -353,21 +368,46 @@
         
         function addLights() {
             // 環境光
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
             scene.add(ambientLight);
-            
-            // 主光源
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(50, 50, 50);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+
+            directionalLight.position.set(30, 112, 30);
             directionalLight.castShadow = true;
             directionalLight.shadow.mapSize.width = 2048;
             directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.left = -50;
+            directionalLight.shadow.camera.right = 50;
+            directionalLight.shadow.camera.top = 50;
+            directionalLight.shadow.camera.bottom = -50;
             scene.add(directionalLight);
-            
-            // 補光
-            const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-            fillLight.position.set(-50, -50, -50);
+
+            // 補光（從左下方）
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            fillLight.position.set(-50, -30, -50);
             scene.add(fillLight);
+
+            // 頂部光源
+            const topLight = new THREE.PointLight(0xffffff, 0.5);
+            topLight.position.set(0, 80, 0);
+            scene.add(topLight);
+        }
+
+        function addFloor() {
+            // 創建地板幾何體
+            const floorGeometry = new THREE.PlaneGeometry(100, 100);
+            const floorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x808080,  // 灰色
+                roughness: 0.8,
+                metalness: 0.2,
+                side: THREE.DoubleSide
+            });
+
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;  // 將平面旋轉為水平
+            floor.position.y = -30;  // 放在模型下方
+            floor.receiveShadow = true;
+            scene.add(floor);
         }
         
         function createDefaultHeart() {
@@ -398,13 +438,18 @@
             heartGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
             heartGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
             
-            const material = new THREE.MeshLambertMaterial({
+            const material = new THREE.MeshStandardMaterial({
                 color: 0xff6b6b,
+                roughness: 0.5,
+                metalness: 0.1,
                 side: THREE.DoubleSide,
-                clippingPlanes: clippingPlanes
+                clippingPlanes: clippingPlanes,
+                clipShadows: true  // 讓陰影也被剪切
             });
-            
+
             heartMesh = new THREE.Points(heartGeometry, material);
+            heartMesh.castShadow = true;
+            heartMesh.receiveShadow = true;
             scene.add(heartMesh);
         }
         
@@ -438,12 +483,15 @@
                     geometry.computeVertexNormals();
                     
                     // 創建材質
-                    const material = new THREE.MeshLambertMaterial({
+                    const material = new THREE.MeshStandardMaterial({
                         color: 0xff6b6b,
+                        roughness: 0.5,
+                        metalness: 0.1,
                         side: THREE.DoubleSide,
-                        clippingPlanes: clippingPlanes
+                        clippingPlanes: clippingPlanes,
+                        clipShadows: true  // 讓陰影也被剪切
                     });
-                    
+
                     // 創建網格
                     heartMesh = new THREE.Mesh(geometry, material);
                     heartMesh.castShadow = true;
@@ -577,6 +625,8 @@
             document.getElementById('enableClipping').addEventListener('change', (event) => {
                 if (heartMesh) {
                     heartMesh.material.clippingPlanes = event.target.checked ? clippingPlanes : [];
+                    heartMesh.material.clipShadows = event.target.checked;
+                    heartMesh.material.needsUpdate = true;
                 }
             });
             

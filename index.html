@@ -31,6 +31,71 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             min-width: 280px;
+            transition: transform 0.3s ease;
+        }
+
+        #controls.collapsed {
+            transform: translateX(-100%);
+        }
+
+        #toggleSidebar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 99;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0 8px 8px 0;
+            width: 30px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            transition: left 0.3s ease, background 0.3s ease;
+            padding: 0;
+        }
+
+        #toggleSidebar:hover {
+            background: rgba(76, 175, 80, 0.8);
+        }
+
+        #toggleSidebar.sidebar-collapsed {
+            left: 20px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .header-row label {
+            margin-bottom: 0;
+        }
+
+        #collapseBtn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            transition: background 0.3s ease;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        #collapseBtn:hover {
+            background: rgba(76, 175, 80, 0.6);
         }
 
         .control-group {
@@ -91,9 +156,9 @@
         #fileInput {
             width: 100%;
             padding: 10px;
-            border: 2px dashed #4CAF50;
+            border: none;
             border-radius: 5px;
-            background: rgba(76, 175, 80, 0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             text-align: center;
             cursor: pointer;
@@ -101,8 +166,7 @@
         }
 
         #fileInput:hover {
-            background: rgba(76, 175, 80, 0.2);
-            border-color: #66BB6A;
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .info {
@@ -171,13 +235,97 @@
             width: 16px;
             height: 16px;
         }
+
+        /* 移動端優化 */
+        @media screen and (max-width: 768px) {
+            #controls {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                padding: 12px;
+                min-width: auto;
+                max-height: none;
+                overflow-y: visible;
+                overflow-x: hidden;
+            }
+
+
+            .control-group {
+                margin-bottom: 12px;
+            }
+
+            .control-group label {
+                font-size: 12px;
+            }
+
+            .slider-container {
+                gap: 8px;
+            }
+
+            .value-display {
+                min-width: 40px;
+                font-size: 11px;
+            }
+
+            button {
+                width: calc(50% - 5px);
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .checkbox-container {
+                margin-top: 8px;
+            }
+
+            .info {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                font-size: 11px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            #controls {
+                font-size: 11px;
+                padding: 10px;
+            }
+
+            .control-group {
+                margin-bottom: 10px;
+            }
+
+            .control-group label {
+                font-size: 11px;
+            }
+
+            button {
+                width: 100%;
+                margin: 3px 0;
+                padding: 8px;
+                font-size: 11px;
+            }
+
+            .value-display {
+                font-size: 10px;
+            }
+
+            .info {
+                font-size: 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="container">
+        <button id="toggleSidebar" class="sidebar-collapsed">&#9654;</button>
         <div id="controls">
             <div class="control-group">
-                <label>載入心臟 STL 檔案:</label>
+                <div class="header-row">
+                    <label>載入心臟 STL 檔案:</label>
+                    <button id="collapseBtn">&#9664;</button>
+                </div>
                 <input type="file" id="fileInput" accept=".stl" />
             </div>
             
@@ -212,11 +360,15 @@
                 </div>
                 <div class="checkbox-container">
                     <input type="checkbox" id="showPlanes" />
-                    <label for="showPlanes">顯示剖切平面</label>
+                    <label for="showPlanes">剖切平面</label>
                 </div>
                 <div class="checkbox-container">
                     <input type="checkbox" id="wireframe" />
                     <label for="wireframe">線框模式</label>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="showFloor" checked />
+                    <label for="showFloor">顯示地板</label>
                 </div>
             </div>
             
@@ -230,15 +382,6 @@
             <div class="spinner"></div>
             <div>載入模型中...</div>
         </div>
-
-        <div class="info">
-            <strong>操作說明:</strong><br>
-            • 滑鼠左鍵拖拽: 旋轉視角<br>
-            • 滑鼠右鍵拖拽: 平移視角<br>
-            • 滾輪: 縮放<br>
-            • 使用滑條調整剖切平面位置<br>
-            • 支援 STL 格式的心臟模型檔案
-        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -246,6 +389,7 @@
         let scene, camera, renderer, controls;
         let heartMesh, clippingPlanes = [];
         let planeHelpers = [];
+        let floor;
         
         // 初始化場景
         function init() {
@@ -280,10 +424,7 @@
 
             // 設置事件監聽器
             setupEventListeners();
-            
-            // 創建默認的心臟幾何體（如果沒有加載STL文件）
-            createDefaultHeart();
-            
+
             // 開始渲染循環
             animate();
         }
@@ -293,25 +434,31 @@
             let isMouseDown = false;
             let mouseButton = 0;
             let previousMousePosition = { x: 0, y: 0 };
-            
+
+            // 觸摸相關變數
+            let touches = [];
+            let previousTouches = [];
+            let initialPinchDistance = 0;
+
+            // === 滑鼠事件 ===
             renderer.domElement.addEventListener('mousedown', (event) => {
                 isMouseDown = true;
                 mouseButton = event.button;
                 previousMousePosition = { x: event.clientX, y: event.clientY };
             });
-            
+
             renderer.domElement.addEventListener('mouseup', () => {
                 isMouseDown = false;
             });
-            
+
             renderer.domElement.addEventListener('mousemove', (event) => {
                 if (!isMouseDown) return;
-                
+
                 const deltaMove = {
                     x: event.clientX - previousMousePosition.x,
                     y: event.clientY - previousMousePosition.y
                 };
-                
+
                 if (mouseButton === 0) { // 左鍵旋轉
                     const spherical = new THREE.Spherical();
                     spherical.setFromVector3(camera.position);
@@ -336,18 +483,115 @@
                     camera.position.addScaledVector(right, -deltaMove.x * factor);
                     camera.position.addScaledVector(up, deltaMove.y * factor);
                 }
-                
+
                 previousMousePosition = { x: event.clientX, y: event.clientY };
             });
-            
+
             renderer.domElement.addEventListener('wheel', (event) => {
+                event.preventDefault();
                 const factor = event.deltaY > 0 ? 1.1 : 0.9;
                 camera.position.multiplyScalar(factor);
             });
-            
+
             renderer.domElement.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
             });
+
+            // === 觸摸事件 ===
+            renderer.domElement.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                touches = Array.from(event.touches);
+                previousTouches = touches.map(t => ({ x: t.clientX, y: t.clientY }));
+
+                // 如果是雙指，記錄初始距離
+                if (touches.length === 2) {
+                    initialPinchDistance = getTouchDistance(touches[0], touches[1]);
+                }
+            }, { passive: false });
+
+            renderer.domElement.addEventListener('touchmove', (event) => {
+                event.preventDefault();
+                touches = Array.from(event.touches);
+
+                if (touches.length === 1 && previousTouches.length === 1) {
+                    // 單指拖動 → 旋轉模型
+                    const deltaMove = {
+                        x: touches[0].clientX - previousTouches[0].x,
+                        y: touches[0].clientY - previousTouches[0].y
+                    };
+
+                    const spherical = new THREE.Spherical();
+                    spherical.setFromVector3(camera.position);
+                    spherical.theta -= deltaMove.x * 0.005;
+                    spherical.phi -= deltaMove.y * 0.005;
+                    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                    camera.position.setFromSpherical(spherical);
+                    camera.lookAt(0, 0, 0);
+
+                } else if (touches.length === 2 && previousTouches.length === 2) {
+                    // 雙指捏合/分開 → 縮放
+                    const currentDistance = getTouchDistance(touches[0], touches[1]);
+                    const previousDistance = getTouchDistance(
+                        { clientX: previousTouches[0].x, clientY: previousTouches[0].y },
+                        { clientX: previousTouches[1].x, clientY: previousTouches[1].y }
+                    );
+
+                    if (previousDistance > 0) {
+                        const scale = currentDistance / previousDistance;
+                        const zoomFactor = scale > 1 ? 0.98 : 1.02;
+                        camera.position.multiplyScalar(zoomFactor);
+                    }
+
+                    // 雙指拖動 → 平移視角
+                    const currentCenter = getTouchCenter(touches[0], touches[1]);
+                    const previousCenter = {
+                        x: (previousTouches[0].x + previousTouches[1].x) / 2,
+                        y: (previousTouches[0].y + previousTouches[1].y) / 2
+                    };
+
+                    const deltaMove = {
+                        x: currentCenter.x - previousCenter.x,
+                        y: currentCenter.y - previousCenter.y
+                    };
+
+                    const factor = camera.position.length() * 0.001;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3();
+
+                    camera.updateMatrixWorld();
+                    camera.matrix.extractBasis(right, up, new THREE.Vector3());
+
+                    camera.position.addScaledVector(right, -deltaMove.x * factor);
+                    camera.position.addScaledVector(up, deltaMove.y * factor);
+                }
+
+                previousTouches = touches.map(t => ({ x: t.clientX, y: t.clientY }));
+            }, { passive: false });
+
+            renderer.domElement.addEventListener('touchend', (event) => {
+                event.preventDefault();
+                touches = Array.from(event.touches);
+                previousTouches = touches.map(t => ({ x: t.clientX, y: t.clientY }));
+
+                if (touches.length < 2) {
+                    initialPinchDistance = 0;
+                }
+            }, { passive: false });
+
+            // 輔助函數：計算兩點距離
+            function getTouchDistance(touch1, touch2) {
+                const dx = touch2.clientX - touch1.clientX;
+                const dy = touch2.clientY - touch1.clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            // 輔助函數：計算兩點中心
+            function getTouchCenter(touch1, touch2) {
+                return {
+                    x: (touch1.clientX + touch2.clientX) / 2,
+                    y: (touch1.clientY + touch2.clientY) / 2
+                };
+            }
         }
         
         function createClippingPlanes() {
@@ -403,7 +647,7 @@
                 side: THREE.DoubleSide
             });
 
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;  // 將平面旋轉為水平
             floor.position.y = -30;  // 放在模型下方
             floor.receiveShadow = true;
@@ -600,7 +844,34 @@
             return geometry;
         }
         
+        // 側邊欄收起/展開
         function setupEventListeners() {
+            const toggleBtn = document.getElementById('toggleSidebar');
+            const collapseBtn = document.getElementById('collapseBtn');
+            const controls = document.getElementById('controls');
+            let isCollapsed = false;
+
+            function toggleSidebar() {
+                isCollapsed = !isCollapsed;
+                if (isCollapsed) {
+                    controls.classList.add('collapsed');
+                    toggleBtn.classList.remove('sidebar-expanded');
+                    toggleBtn.classList.add('sidebar-collapsed');
+                    toggleBtn.style.display = 'flex';
+                } else {
+                    controls.classList.remove('collapsed');
+                    toggleBtn.classList.remove('sidebar-collapsed');
+                    toggleBtn.classList.add('sidebar-expanded');
+                    toggleBtn.style.display = 'none';
+                }
+            }
+
+            toggleBtn.addEventListener('click', toggleSidebar);
+            collapseBtn.addEventListener('click', toggleSidebar);
+
+            // 初始隱藏展開按鈕
+            toggleBtn.style.display = 'none';
+
             // 檔案輸入
             document.getElementById('fileInput').addEventListener('change', (event) => {
                 const file = event.target.files[0];
@@ -643,7 +914,14 @@
                     heartMesh.material.wireframe = event.target.checked;
                 }
             });
-            
+
+            // 顯示/隱藏地板
+            document.getElementById('showFloor').addEventListener('change', (event) => {
+                if (floor) {
+                    floor.visible = event.target.checked;
+                }
+            });
+
             // 視窗大小調整
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;

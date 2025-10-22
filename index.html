@@ -236,6 +236,49 @@
             height: 16px;
         }
 
+        /* 相對視角剖切底部控制 */
+        #relativeClippingControls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 25px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+            min-width: 400px;
+        }
+
+        #relativeClippingControls.active {
+            display: block;
+        }
+
+        .relative-control-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .relative-control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .relative-control-row label {
+            font-size: 13px;
+            color: #ffffff;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+        #relativeDepth {
+            flex: 1;
+            min-width: 200px;
+        }
+
         /* 移動端優化 */
         @media screen and (max-width: 768px) {
             #controls {
@@ -283,6 +326,25 @@
                 right: 10px;
                 max-width: none;
                 font-size: 11px;
+            }
+
+            #relativeClippingControls {
+                bottom: 10px;
+                min-width: auto;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                padding: 12px 15px;
+            }
+
+            .relative-control-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .relative-control-row label {
+                min-width: auto;
             }
         }
 
@@ -370,6 +432,10 @@
                     <input type="checkbox" id="showFloor" checked />
                     <label for="showFloor">顯示地板</label>
                 </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="relativeCameraClipping" />
+                    <label for="relativeCameraClipping">相對視角剖切</label>
+                </div>
             </div>
             
             <div class="control-group">
@@ -382,6 +448,21 @@
             <div class="spinner"></div>
             <div>載入模型中...</div>
         </div>
+
+        <!-- 相對視角剖切控制 -->
+        <div id="relativeClippingControls">
+            <div class="relative-control-row">
+                <label>剖切深度:</label>
+                <input type="range" id="relativeDepth" min="-50" max="50" step="0.1" value="0" />
+                <span class="value-display" id="relativeDepthValue">0.0</span>
+            </div>
+            <div class="relative-control-row">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="lockAngle" />
+                    <label for="lockAngle">鎖定切面角度</label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -390,18 +471,24 @@
         let heartMesh, clippingPlanes = [];
         let planeHelpers = [];
         let floor;
+
+        // 相對視角剖切相關變數
+        let isRelativeCameraClipping = false;
+        let relativeClippingPlane = null;
+        let relativeClippingHelper = null;
+        let lockedCameraNormal = null;
+        let relativeClippingDepth = 0;
         
-        // 初始化場景
         function init() {
-            // 創建場景
+            // Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x263238);
             
-            // 創建相機
+            // Camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 100);
             
-            // 創建渲染器
+            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.localClippingEnabled = true;
@@ -409,23 +496,17 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.shadowMap.autoUpdate = true;
             document.getElementById('container').appendChild(renderer.domElement);
-            
-            // 創建軌道控制器
+
             createOrbitControls();
             
-            // 創建剖切平面
             createClippingPlanes();
             
-            // 添加光源
             addLights();
 
-            // 添加地板
             addFloor();
 
-            // 設置事件監聽器
             setupEventListeners();
 
-            // 開始渲染循環
             animate();
         }
         
@@ -459,7 +540,7 @@
                     y: event.clientY - previousMousePosition.y
                 };
 
-                if (mouseButton === 0) { // 左鍵旋轉
+                if (mouseButton === 0) { 
                     const spherical = new THREE.Spherical();
                     spherical.setFromVector3(camera.position);
                     spherical.theta -= deltaMove.x * 0.005;
@@ -467,7 +548,7 @@
                     spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
                     camera.position.setFromSpherical(spherical);
                     camera.lookAt(0, 0, 0);
-                } else if (mouseButton === 2) { // 右鍵平移（相對於視角）
+                } else if (mouseButton === 2) { 
                     const factor = camera.position.length() * 0.001;
 
                     // 獲取相機的局部座標系向量
@@ -600,7 +681,7 @@
                 new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
                 new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
             ];
-            
+
             // 創建平面輔助顯示
             planeHelpers = clippingPlanes.map((plane, index) => {
                 const helper = new THREE.PlaneHelper(plane, 50, [0xFF7043, 0x26A69A, 0x7986CB][index]);
@@ -608,6 +689,12 @@
                 scene.add(helper);
                 return helper;
             });
+
+            // 創建相對視角剖切平面
+            relativeClippingPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
+            relativeClippingHelper = new THREE.PlaneHelper(relativeClippingPlane, 50, 0xFFEB3B);
+            relativeClippingHelper.visible = false;
+            scene.add(relativeClippingHelper);
         }
         
         function addLights() {
@@ -648,8 +735,8 @@
             });
 
             floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;  // 將平面旋轉為水平
-            floor.position.y = -30;  // 放在模型下方
+            floor.rotation.x = -Math.PI / 2;    // 將平面旋轉為水平
+            floor.position.y = -30;             // 放在模型下方
             floor.receiveShadow = true;
             scene.add(floor);
         }
@@ -903,9 +990,15 @@
             
             // 顯示剖切平面
             document.getElementById('showPlanes').addEventListener('change', (event) => {
-                planeHelpers.forEach(helper => {
-                    helper.visible = event.target.checked;
-                });
+                if (isRelativeCameraClipping) {
+                    // 相對視角模式：顯示相對剖切平面
+                    relativeClippingHelper.visible = event.target.checked;
+                } else {
+                    // 世界空間模式：顯示世界空間平面
+                    planeHelpers.forEach(helper => {
+                        helper.visible = event.target.checked;
+                    });
+                }
             });
             
             // 線框模式
@@ -919,6 +1012,71 @@
             document.getElementById('showFloor').addEventListener('change', (event) => {
                 if (floor) {
                     floor.visible = event.target.checked;
+                }
+            });
+
+            // 相對視角剖切模式切換
+            document.getElementById('relativeCameraClipping').addEventListener('change', (event) => {
+                isRelativeCameraClipping = event.target.checked;
+                const relativeControls = document.getElementById('relativeClippingControls');
+                const showPlanesCheckbox = document.getElementById('showPlanes');
+
+                if (isRelativeCameraClipping) {
+                    // 啟用相對視角剖切
+                    relativeControls.classList.add('active');
+
+                    // 切換到相對視角剖切平面
+                    if (heartMesh) {
+                        heartMesh.material.clippingPlanes = [relativeClippingPlane];
+                        heartMesh.material.needsUpdate = true;
+                    }
+
+                    // 隱藏世界空間平面輔助線
+                    planeHelpers.forEach(helper => helper.visible = false);
+
+                    // 根據showPlanes狀態顯示相對剖切平面輔助線
+                    relativeClippingHelper.visible = showPlanesCheckbox.checked;
+                } else {
+                    // 切換回世界空間剖切
+                    relativeControls.classList.remove('active');
+
+                    if (heartMesh) {
+                        const enableClipping = document.getElementById('enableClipping').checked;
+                        heartMesh.material.clippingPlanes = enableClipping ? clippingPlanes : [];
+                        heartMesh.material.needsUpdate = true;
+                    }
+
+                    // 重置鎖定
+                    lockedCameraNormal = null;
+                    document.getElementById('lockAngle').checked = false;
+
+                    // 隱藏相對剖切平面輔助線
+                    relativeClippingHelper.visible = false;
+
+                    // 根據showPlanes狀態顯示世界空間平面輔助線
+                    planeHelpers.forEach(helper => {
+                        helper.visible = showPlanesCheckbox.checked;
+                    });
+                }
+            });
+
+            // 相對剖切深度調整
+            document.getElementById('relativeDepth').addEventListener('input', (event) => {
+                const value = parseFloat(event.target.value);
+                document.getElementById('relativeDepthValue').textContent = value.toFixed(1);
+                relativeClippingDepth = value;
+            });
+
+            // 鎖定切面角度
+            document.getElementById('lockAngle').addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    // 鎖定當前相機方向
+                    const cameraDirection = new THREE.Vector3();
+                    camera.getWorldDirection(cameraDirection);
+                    lockedCameraNormal = cameraDirection.negate().clone();
+                } else {
+                    // 解除鎖定
+                    lockedCameraNormal = null;
                 }
             });
 
@@ -947,6 +1105,21 @@
         
         function animate() {
             requestAnimationFrame(animate);
+
+            // 更新相對視角剖切平面
+            if (isRelativeCameraClipping && relativeClippingPlane) {
+                if (lockedCameraNormal) {
+                    // 使用鎖定的法向量
+                    relativeClippingPlane.normal.copy(lockedCameraNormal);
+                } else {
+                    // 使用當前相機方向作為法向量
+                    const cameraDirection = new THREE.Vector3();
+                    camera.getWorldDirection(cameraDirection);
+                    relativeClippingPlane.normal.copy(cameraDirection).negate();
+                }
+                relativeClippingPlane.constant = relativeClippingDepth;
+            }
+
             renderer.render(scene, camera);
         }
         

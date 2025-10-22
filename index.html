@@ -418,7 +418,11 @@
             <div class="control-group">
                 <div class="checkbox-container">
                     <input type="checkbox" id="enableClipping" checked />
-                    <label for="enableClipping">啟用剖切</label>
+                    <label for="enableClipping">絕對剖切</label>
+                </div>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="relativeCameraClipping" />
+                    <label for="relativeCameraClipping">相對剖切</label>
                 </div>
                 <div class="checkbox-container">
                     <input type="checkbox" id="showPlanes" />
@@ -431,10 +435,6 @@
                 <div class="checkbox-container">
                     <input type="checkbox" id="showFloor" checked />
                     <label for="showFloor">顯示地板</label>
-                </div>
-                <div class="checkbox-container">
-                    <input type="checkbox" id="relativeCameraClipping" />
-                    <label for="relativeCameraClipping">相對視角剖切</label>
                 </div>
             </div>
             
@@ -731,7 +731,9 @@
                 color: 0x808080,  // 灰色
                 roughness: 0.8,
                 metalness: 0.2,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                // 地板不被剖切，但需要接收被剖切物體的陰影
+                clipShadows: true
             });
 
             floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -981,6 +983,15 @@
             
             // 啟用/停用剖切
             document.getElementById('enableClipping').addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    // 當勾選絕對剖切時，自動取消相對剖切
+                    const relativeCameraClippingCheckbox = document.getElementById('relativeCameraClipping');
+                    if (relativeCameraClippingCheckbox.checked) {
+                        relativeCameraClippingCheckbox.checked = false;
+                        // 觸發相對剖切的change事件以更新狀態
+                        relativeCameraClippingCheckbox.dispatchEvent(new Event('change'));
+                    }
+                }
                 if (heartMesh) {
                     heartMesh.material.clippingPlanes = event.target.checked ? clippingPlanes : [];
                     heartMesh.material.clipShadows = event.target.checked;
@@ -1017,6 +1028,16 @@
 
             // 相對視角剖切模式切換
             document.getElementById('relativeCameraClipping').addEventListener('change', (event) => {
+                if (event.target.checked) {
+                    // 當勾選相對剖切時，自動取消絕對剖切
+                    const enableClippingCheckbox = document.getElementById('enableClipping');
+                    if (enableClippingCheckbox.checked) {
+                        enableClippingCheckbox.checked = false;
+                        // 觸發絕對剖切的change事件以更新狀態
+                        enableClippingCheckbox.dispatchEvent(new Event('change'));
+                    }
+                }
+
                 isRelativeCameraClipping = event.target.checked;
                 const relativeControls = document.getElementById('relativeClippingControls');
                 const showPlanesCheckbox = document.getElementById('showPlanes');
@@ -1030,6 +1051,8 @@
                         heartMesh.material.clippingPlanes = [relativeClippingPlane];
                         heartMesh.material.needsUpdate = true;
                     }
+
+                    // 地板不應該被剖切 - 不設置 clippingPlanes
 
                     // 隱藏世界空間平面輔助線
                     planeHelpers.forEach(helper => helper.visible = false);
@@ -1045,6 +1068,8 @@
                         heartMesh.material.clippingPlanes = enableClipping ? clippingPlanes : [];
                         heartMesh.material.needsUpdate = true;
                     }
+
+                    // 地板不應該被剖切 - 不設置 clippingPlanes
 
                     // 重置鎖定
                     lockedCameraNormal = null;

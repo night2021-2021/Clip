@@ -394,24 +394,24 @@
             <div class="control-group">
                 <label>X軸剖切:</label>
                 <div class="slider-container">
-                    <input type="range" id="clipX" min="-25" max="25" step="0.1" value="0" />
-                    <span class="value-display" id="clipXValue">0.0</span>
+                    <input type="range" id="clipX" min="-25" max="25" step="0.1" value="25" />
+                    <span class="value-display" id="clipXValue">25.0</span>
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Y軸剖切:</label>
                 <div class="slider-container">
-                    <input type="range" id="clipY" min="-25" max="25" step="0.1" value="0" />
-                    <span class="value-display" id="clipYValue">0.0</span>
+                    <input type="range" id="clipY" min="-25" max="25" step="0.1" value="25" />
+                    <span class="value-display" id="clipYValue">25.0</span>
                 </div>
             </div>
 
             <div class="control-group">
                 <label>Z軸剖切:</label>
                 <div class="slider-container">
-                    <input type="range" id="clipZ" min="-25" max="25" step="0.1" value="0" />
-                    <span class="value-display" id="clipZValue">0.0</span>
+                    <input type="range" id="clipZ" min="-25" max="25" step="0.1" value="25" />
+                    <span class="value-display" id="clipZValue">25.0</span>
                 </div>
             </div>
             
@@ -478,24 +478,112 @@
         let relativeClippingHelper = null;
         let lockedCameraNormal = null;
         let relativeClippingDepth = 0;
-        
+
+        // 建立 AR 按鈕
+        function createARButton() {
+            const button = document.createElement('button');
+            button.id = 'ARButton';
+            button.style.cssText = `
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                background: rgba(76, 175, 80, 0.9);
+                color: white;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                z-index: 999;
+                font-family: Arial, sans-serif;
+            `;
+
+            function showStartAR() {
+                let currentSession = null;
+
+                async function onSessionStarted(session) {
+                    session.addEventListener('end', onSessionEnded);
+                    await renderer.xr.setSession(session);
+                    button.textContent = 'EXIT AR';
+                    currentSession = session;
+                }
+
+                function onSessionEnded() {
+                    currentSession.removeEventListener('end', onSessionEnded);
+                    button.textContent = 'START AR';
+                    currentSession = null;
+                }
+
+                button.textContent = 'START AR';
+                button.onclick = function() {
+                    if (currentSession === null) {
+                        const sessionInit = {
+                            requiredFeatures: ['hit-test'],
+                            optionalFeatures: ['dom-overlay'],
+                            domOverlay: { root: document.body }
+                        };
+                        navigator.xr.requestSession('immersive-ar', sessionInit)
+                            .then(onSessionStarted)
+                            .catch((err) => {
+                                console.error('AR Session 錯誤:', err);
+                                alert('無法啟動 AR 模式：' + err.message);
+                            });
+                    } else {
+                        currentSession.end();
+                    }
+                };
+            }
+
+            function showARNotSupported() {
+                button.textContent = 'AR NOT SUPPORTED';
+                button.style.cursor = 'not-allowed';
+                button.style.background = 'rgba(128, 128, 128, 0.7)';
+                button.onclick = null;
+            }
+
+            if ('xr' in navigator) {
+                navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                    if (supported) {
+                        showStartAR();
+                    } else {
+                        showARNotSupported();
+                    }
+                }).catch(() => {
+                    showARNotSupported();
+                });
+            } else {
+                showARNotSupported();
+            }
+
+            document.body.appendChild(button);
+        }
+
         function init() {
             // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x263238);
+            scene.background = null; // AR 需要透明背景
             
             // Camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 100);
             
             // Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.localClippingEnabled = true;
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.shadowMap.autoUpdate = true;
+
+            // AR 模式設定
+            renderer.xr.enabled = true;
+            renderer.setClearColor(0x000000, 0); // 透明背景
+
             document.getElementById('container').appendChild(renderer.domElement);
+
+            // 建立 AR 按鈕
+            createARButton();
 
             createOrbitControls();
             
@@ -1049,6 +1137,7 @@
                     // 切換到相對視角剖切平面
                     if (heartMesh) {
                         heartMesh.material.clippingPlanes = [relativeClippingPlane];
+                        heartMesh.material.clipShadows = true; // ✅ 讓陰影也被剖切
                         heartMesh.material.needsUpdate = true;
                     }
 
@@ -1066,6 +1155,7 @@
                     if (heartMesh) {
                         const enableClipping = document.getElementById('enableClipping').checked;
                         heartMesh.material.clippingPlanes = enableClipping ? clippingPlanes : [];
+                        heartMesh.material.clipShadows = enableClipping; // ✅ 根據啟用狀態設定陰影剖切
                         heartMesh.material.needsUpdate = true;
                     }
 
@@ -1129,23 +1219,24 @@
         }
         
         function animate() {
-            requestAnimationFrame(animate);
-
-            // 更新相對視角剖切平面
-            if (isRelativeCameraClipping && relativeClippingPlane) {
-                if (lockedCameraNormal) {
-                    // 使用鎖定的法向量
-                    relativeClippingPlane.normal.copy(lockedCameraNormal);
-                } else {
-                    // 使用當前相機方向作為法向量
-                    const cameraDirection = new THREE.Vector3();
-                    camera.getWorldDirection(cameraDirection);
-                    relativeClippingPlane.normal.copy(cameraDirection).negate();
+            // 使用 WebXR 專用的 setAnimationLoop（支援 AR/VR）
+            renderer.setAnimationLoop(function() {
+                // 更新相對視角剖切平面
+                if (isRelativeCameraClipping && relativeClippingPlane) {
+                    if (lockedCameraNormal) {
+                        // 使用鎖定的法向量
+                        relativeClippingPlane.normal.copy(lockedCameraNormal);
+                    } else {
+                        // 使用當前相機方向作為法向量
+                        const cameraDirection = new THREE.Vector3();
+                        camera.getWorldDirection(cameraDirection);
+                        relativeClippingPlane.normal.copy(cameraDirection).negate();
+                    }
+                    relativeClippingPlane.constant = relativeClippingDepth;
                 }
-                relativeClippingPlane.constant = relativeClippingDepth;
-            }
 
-            renderer.render(scene, camera);
+                renderer.render(scene, camera);
+            });
         }
         
         init();

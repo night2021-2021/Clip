@@ -559,16 +559,15 @@
             }
 
             function showARNotSupported() {
-                button.textContent = 'AR NOT SUPPORTED';
-                button.style.cursor = 'not-allowed';
-                button.style.background = 'rgba(128, 128, 128, 0.7)';
-                button.onclick = null;
+                // 不支援AR時，不顯示按鈕
+                button.remove();
             }
 
             if ('xr' in navigator) {
                 navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
                     if (supported) {
                         showStartAR();
+                        document.body.appendChild(button);
                     } else {
                         showARNotSupported();
                     }
@@ -578,8 +577,6 @@
             } else {
                 showARNotSupported();
             }
-
-            document.body.appendChild(button);
         }
 
         function init() {

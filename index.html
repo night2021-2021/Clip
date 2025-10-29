@@ -583,7 +583,6 @@
         function init() {
             // Scene
             scene = new THREE.Scene();
-            scene.background = null; // AR 需要透明背景
 
             // Camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -599,9 +598,11 @@
 
             // AR 模式設定
             renderer.xr.enabled = true;
-            renderer.setClearColor(0x000000, 0); // 透明背景
 
             document.getElementById('container').appendChild(renderer.domElement);
+
+            // 檢查 AR 支援並設定背景
+            checkARSupportAndSetBackground();
 
             // 建立 AR 按鈕
             createARButton();
@@ -620,6 +621,27 @@
             loadDefaultSTL();
 
             animate();
+        }
+
+        function checkARSupportAndSetBackground() {
+            if ('xr' in navigator) {
+                navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                    if (supported) {
+                        scene.background = null;
+                        renderer.setClearColor(0x000000, 0);
+                    } else {
+                        scene.background = new THREE.Color(0x181818);
+                        renderer.setClearColor(0x181818, 1);
+                    }
+                }).catch(() => {
+                    scene.background = new THREE.Color(0x181818);
+                    renderer.setClearColor(0x181818, 1);
+                });
+            } else {
+                // 不支援 WebXR
+                scene.background = new THREE.Color(0x181818);
+                renderer.setClearColor(0x181818, 1);
+            }
         }
         
         function createOrbitControls() {

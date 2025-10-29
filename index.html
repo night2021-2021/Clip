@@ -123,6 +123,7 @@
             background: #333;
             outline: none;
             -webkit-appearance: none;
+            appearance: none;
         }
 
         input[type="range"]::-webkit-slider-thumb {
@@ -583,11 +584,11 @@
             // Scene
             scene = new THREE.Scene();
             scene.background = null; // AR 需要透明背景
-            
+
             // Camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 0, 100);
-            
+
             // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -606,14 +607,17 @@
             createARButton();
 
             createOrbitControls();
-            
+
             createClippingPlanes();
-            
+
             addLights();
 
             addFloor();
 
             setupEventListeners();
+
+            // 載入預設模型
+            loadDefaultSTL();
 
             animate();
         }
@@ -894,61 +898,90 @@
             scene.add(heartMesh);
         }
         
+        function loadDefaultSTL() {
+            // 載入預設的 STL 模型
+            document.getElementById('loadingIndicator').style.display = 'block';
+
+            fetch('pid_1000.stl')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('無法載入預設模型');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(buffer => {
+                    try {
+                        const geometry = parseSTL(buffer);
+                        createMeshFromGeometry(geometry);
+                        document.getElementById('loadingIndicator').style.display = 'none';
+                    } catch (error) {
+                        console.error('預設 STL 檔案載入錯誤:', error);
+                        document.getElementById('loadingIndicator').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('無法載入預設模型:', error);
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                });
+        }
+
         function loadSTL(file) {
             document.getElementById('loadingIndicator').style.display = 'block';
-            
+
             const reader = new FileReader();
             reader.onload = function(event) {
                 try {
                     const contents = event.target.result;
                     const geometry = parseSTL(contents);
-                    
-                    // 移除舊的模型
-                    if (heartMesh) {
-                        scene.remove(heartMesh);
-                    }
-                    
-                    // 計算幾何體邊界框以便正確縮放
-                    geometry.computeBoundingBox();
-                    const box = geometry.boundingBox;
-                    const size = box.getSize(new THREE.Vector3());
-                    const maxDim = Math.max(size.x, size.y, size.z);
-                    const scale = 50 / maxDim; // 縮放到合適大小
-                    
-                    // 居中幾何體
-                    const center = box.getCenter(new THREE.Vector3());
-                    geometry.translate(-center.x, -center.y, -center.z);
-                    geometry.scale(scale, scale, scale);
-                    
-                    // 計算法向量
-                    geometry.computeVertexNormals();
-                    
-                    // 創建材質
-                    const material = new THREE.MeshStandardMaterial({
-                        color: 0xff6b6b,
-                        roughness: 0.5,
-                        metalness: 0.1,
-                        side: THREE.DoubleSide,
-                        clippingPlanes: clippingPlanes,
-                        clipShadows: true  // 讓陰影也被剪切
-                    });
-
-                    // 創建網格
-                    heartMesh = new THREE.Mesh(geometry, material);
-                    heartMesh.castShadow = true;
-                    heartMesh.receiveShadow = true;
-                    scene.add(heartMesh);
-                    
+                    createMeshFromGeometry(geometry);
                     document.getElementById('loadingIndicator').style.display = 'none';
-                    
+
                 } catch (error) {
                     console.error('STL 檔案載入錯誤:', error);
                     alert('載入 STL 檔案時發生錯誤，請確認檔案格式正確。');
                     document.getElementById('loadingIndicator').style.display = 'none';
                 }
             };
-            
+
             reader.readAsArrayBuffer(file);
+        }
+
+        function createMeshFromGeometry(geometry) {
+            // 移除舊的模型
+            if (heartMesh) {
+                scene.remove(heartMesh);
+            }
+
+            // 計算幾何體邊界框以便正確縮放
+            geometry.computeBoundingBox();
+            const box = geometry.boundingBox;
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 50 / maxDim; // 縮放到合適大小
+
+            // 居中幾何體
+            const center = box.getCenter(new THREE.Vector3());
+            geometry.translate(-center.x, -center.y, -center.z);
+            geometry.scale(scale, scale, scale);
+
+            // 計算法向量
+            geometry.computeVertexNormals();
+
+            // 創建材質
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xff6b6b,
+                roughness: 0.5,
+                metalness: 0.1,
+                side: THREE.DoubleSide,
+                clippingPlanes: clippingPlanes,
+                clipShadows: true  // 讓陰影也被剪切
+            });
+
+            // 創建網格
+            heartMesh = new THREE.Mesh(geometry, material);
+            heartMesh.castShadow = true;
+            heartMesh.receiveShadow = true;
+            scene.add(heartMesh);
         }
         
         function parseSTL(buffer) {

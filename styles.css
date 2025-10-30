@@ -415,7 +415,7 @@ input[type="checkbox"] {
         top: auto;
         bottom: 150px;
         bottom: max(150px, calc(150px + env(safe-area-inset-bottom)));
-        right: 10px;
+        right: 20px;
         border-radius: 8px 8px 0 0;
         width: 40px;
         height: 30px;
@@ -429,7 +429,7 @@ input[type="checkbox"] {
     #fpsCounter {
         top: auto;
         bottom: 10px;
-        right: 10px;
+        right: 20px;
         font-size: 10px;
         padding: 6px 10px;
     }

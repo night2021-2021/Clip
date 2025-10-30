@@ -155,6 +155,11 @@
         }
 
         #fileInput {
+            display: none;
+        }
+
+        #fileInputLabel {
+            display: block;
             width: 100%;
             padding: 10px;
             border: none;
@@ -164,9 +169,10 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
 
-        #fileInput:hover {
+        #fileInputLabel:hover {
             background: rgba(255, 255, 255, 0.15);
         }
 
@@ -404,6 +410,7 @@
                     <button id="collapseBtn">&#9664;</button>
                 </div>
                 <input type="file" id="fileInput" accept=".stl" />
+                <label for="fileInput" id="fileInputLabel">Choose File</label>
             </div>
 
             <div class="control-group">

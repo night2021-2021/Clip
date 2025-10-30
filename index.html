@@ -630,17 +630,17 @@
                         scene.background = null;
                         renderer.setClearColor(0x000000, 0);
                     } else {
-                        scene.background = new THREE.Color(0x181818);
-                        renderer.setClearColor(0x181818, 1);
+                        scene.background = new THREE.Color(0x1A1A1A);
+                        renderer.setClearColor(0x1A1A1A, 1);
                     }
                 }).catch(() => {
-                    scene.background = new THREE.Color(0x181818);
-                    renderer.setClearColor(0x181818, 1);
+                    scene.background = new THREE.Color(0x1A1A1A);
+                    renderer.setClearColor(0x1A1A1A, 1);
                 });
             } else {
                 // WebXR not supported
-                scene.background = new THREE.Color(0x181818);
-                renderer.setClearColor(0x181818, 1);
+                scene.background = new THREE.Color(0x1A1A1A);
+                renderer.setClearColor(0x1A1A1A, 1);
             }
         }
 

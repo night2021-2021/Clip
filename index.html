@@ -188,6 +188,20 @@
             max-width: 300px;
         }
 
+        #fpsCounter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 11px;
+            color: white;
+            font-family: monospace;
+            z-index: 100;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         #loadingIndicator {
             position: absolute;
             top: 50%;
@@ -471,6 +485,9 @@
             <div>Loading model...</div>
         </div>
 
+        <!-- FPS Counter -->
+        <div id="fpsCounter">FPS: 0</div>
+
         <!-- Relative perspective clipping control -->
         <div id="relativeClippingControls">
             <div class="relative-control-row">
@@ -509,6 +526,11 @@
         let isAutoDepth = false;
         let autoDepthDirection = 1; // 1: forward (increase), -1: backward (decrease)
         let autoDepthSpeed = 0.5; // Movement speed per frame
+
+        // FPS counter variables
+        let fps = 0;
+        let frameCount = 0;
+        let lastTime = performance.now();
 
         // Create AR button
         function createARButton() {
@@ -1312,6 +1334,18 @@
         function animate() {
             // Use WebXR-specific setAnimationLoop (supports AR/VR)
             renderer.setAnimationLoop(function() {
+                // Calculate FPS
+                frameCount++;
+                const currentTime = performance.now();
+                const deltaTime = currentTime - lastTime;
+
+                if (deltaTime >= 1000) { // Update every second
+                    fps = Math.round((frameCount * 1000) / deltaTime);
+                    document.getElementById('fpsCounter').textContent = `FPS: ${fps}`;
+                    frameCount = 0;
+                    lastTime = currentTime;
+                }
+
                 // Auto automatic clipping depth adjustment
                 if (isAutoDepth && isRelativeCameraClipping) {
                     relativeClippingDepth += autoDepthSpeed * autoDepthDirection;

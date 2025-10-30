@@ -5,12 +5,16 @@ body {
     font-family: 'Arial', sans-serif;
     overflow: hidden;
     color: white;
+    width: 100%;
+    max-width: 100vw;
 }
 
 #container {
     position: relative;
-    width: 100vw;
+    width: 100%;
+    max-width: 100vw;
     height: 100vh;
+    overflow: hidden;
 }
 
 #controls {
@@ -382,31 +386,35 @@ input[type="checkbox"] {
     #controls {
         font-size: 11px;
         padding: 10px;
-        width: 100%;
+        width: calc(100% - 20px);
         left: 10px;
         right: 10px;
         top: 10px;
+        max-height: 35vh;
+        overflow-y: auto;
     }
 
     #nrrdControls {
         font-size: 11px;
         padding: 10px;
-        width: 100%;
+        width: calc(100% - 20px);
         left: 10px;
         right: 10px;
         top: auto;
-        bottom: 160px;
-        bottom: max(160px, calc(160px + env(safe-area-inset-bottom)));
+        bottom: 180px;
+        bottom: max(180px, calc(180px + env(safe-area-inset-bottom)));
+        max-height: 30vh;
+        overflow-y: auto;
     }
 
     #nrrdControls.collapsed {
-        transform: translateY(100%);
+        transform: translateY(calc(100% + 20px));
     }
 
     #toggleNrrdSidebar {
         top: auto;
-        bottom: 160px;
-        bottom: max(160px, calc(160px + env(safe-area-inset-bottom)));
+        bottom: 150px;
+        bottom: max(150px, calc(150px + env(safe-area-inset-bottom)));
         right: 10px;
         border-radius: 8px 8px 0 0;
         width: 40px;
@@ -414,8 +422,16 @@ input[type="checkbox"] {
     }
 
     #toggleNrrdSidebar.sidebar-collapsed {
-        bottom: 160px;
-        bottom: max(160px, calc(160px + env(safe-area-inset-bottom)));
+        bottom: 150px;
+        bottom: max(150px, calc(150px + env(safe-area-inset-bottom)));
+    }
+
+    #fpsCounter {
+        top: auto;
+        bottom: 10px;
+        right: 10px;
+        font-size: 10px;
+        padding: 6px 10px;
     }
 
     .control-group {
@@ -439,11 +455,12 @@ input[type="checkbox"] {
 
     .info {
         font-size: 10px;
+        display: none;
     }
 
     #relativeClippingControls {
-        bottom: 120px;
-        bottom: max(120px, calc(120px + env(safe-area-inset-bottom)));
+        bottom: 10px;
+        bottom: max(10px, calc(10px + env(safe-area-inset-bottom)));
         padding: 10px 12px;
     }
 

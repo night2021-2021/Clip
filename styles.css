@@ -1,0 +1,543 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+    color: white;
+}
+
+#container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 280px;
+    transition: transform 0.3s ease;
+}
+
+#controls.collapsed {
+    transform: translateX(-100%);
+}
+
+#toggleSidebar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 99;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 8px 8px 0;
+    width: 30px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    transition: left 0.3s ease, background 0.3s ease;
+    padding: 0;
+}
+
+#toggleSidebar:hover {
+    background: rgba(76, 175, 80, 0.8);
+}
+
+#toggleSidebar.sidebar-collapsed {
+    left: 20px;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.header-row label {
+    margin-bottom: 0;
+}
+
+#collapseBtn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    transition: background 0.3s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+#collapseBtn:hover {
+    background: rgba(76, 175, 80, 0.6);
+}
+
+.control-group {
+    margin-bottom: 20px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #ffffff;
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="range"] {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #333;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.value-display {
+    min-width: 50px;
+    text-align: right;
+    font-family: monospace;
+    font-size: 12px;
+    color: #ccc;
+}
+
+#fileInput {
+    display: none;
+}
+
+#fileInputLabel {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#fileInputLabel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.info {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #ccc;
+    max-width: 300px;
+}
+
+#fpsCounter {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: white;
+    font-family: monospace;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#loadingIndicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    display: none;
+}
+
+.spinner {
+    border: 3px solid #333;
+    border-top: 3px solid #4CAF50;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+button {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin: 5px;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #66BB6A;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+/* Relative perspective clipping bottom control */
+#relativeClippingControls {
+    position: absolute;
+    bottom: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px 25px;
+    padding-bottom: max(15px, calc(15px + env(safe-area-inset-bottom)));
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: none;
+    min-width: 400px;
+}
+
+#relativeClippingControls.active {
+    display: block;
+}
+
+.relative-control-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.relative-control-row:last-child {
+    margin-bottom: 0;
+}
+
+.relative-control-row label {
+    font-size: 13px;
+    color: #ffffff;
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+#relativeDepth {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* Mobile optimization */
+@media screen and (max-width: 768px) {
+    #controls {
+        top: 10px;
+        left: 10px;
+        right: auto;
+        width: calc(50% - 15px);
+        padding: 12px;
+        min-width: auto;
+        max-height: none;
+        overflow-y: visible;
+        overflow-x: hidden;
+    }
+
+    #nrrdControls {
+        top: 10px;
+        right: 10px;
+        left: auto;
+        width: calc(50% - 15px);
+        padding: 12px;
+        min-width: auto;
+        max-height: none;
+        overflow-y: visible;
+        overflow-x: hidden;
+    }
+
+    .control-group {
+        margin-bottom: 12px;
+    }
+
+    .control-group label {
+        font-size: 12px;
+    }
+
+    .slider-container {
+        gap: 8px;
+    }
+
+    .value-display {
+        min-width: 40px;
+        font-size: 11px;
+    }
+
+    button {
+        width: calc(50% - 5px);
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .checkbox-container {
+        margin-top: 8px;
+    }
+
+    .info {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        font-size: 11px;
+    }
+
+    #relativeClippingControls {
+        bottom: 100px;
+        bottom: max(100px, calc(100px + env(safe-area-inset-bottom)));
+        min-width: auto;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        padding: 12px 15px;
+        max-width: calc(100vw - 20px);
+    }
+
+    .relative-control-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .relative-control-row label {
+        min-width: auto;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    #controls {
+        font-size: 11px;
+        padding: 10px;
+        width: 100%;
+        left: 10px;
+        right: 10px;
+        top: 10px;
+    }
+
+    #nrrdControls {
+        font-size: 11px;
+        padding: 10px;
+        width: 100%;
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: 160px;
+        bottom: max(160px, calc(160px + env(safe-area-inset-bottom)));
+    }
+
+    #nrrdControls.collapsed {
+        transform: translateY(100%);
+    }
+
+    #toggleNrrdSidebar {
+        top: auto;
+        bottom: 160px;
+        bottom: max(160px, calc(160px + env(safe-area-inset-bottom)));
+        right: 10px;
+        border-radius: 8px 8px 0 0;
+        width: 40px;
+        height: 30px;
+    }
+
+    #toggleNrrdSidebar.sidebar-collapsed {
+        bottom: 160px;
+        bottom: max(160px, calc(160px + env(safe-area-inset-bottom)));
+    }
+
+    .control-group {
+        margin-bottom: 10px;
+    }
+
+    .control-group label {
+        font-size: 11px;
+    }
+
+    button {
+        width: 100%;
+        margin: 3px 0;
+        padding: 8px;
+        font-size: 11px;
+    }
+
+    .value-display {
+        font-size: 10px;
+    }
+
+    .info {
+        font-size: 10px;
+    }
+
+    #relativeClippingControls {
+        bottom: 120px;
+        bottom: max(120px, calc(120px + env(safe-area-inset-bottom)));
+        padding: 10px 12px;
+    }
+
+    .relative-control-row label {
+        font-size: 12px;
+    }
+}
+
+/* Right sidebar for NRRD controls */
+#nrrdControls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 280px;
+    transition: transform 0.3s ease;
+}
+
+#nrrdControls.collapsed {
+    transform: translateX(100%);
+}
+
+#toggleNrrdSidebar {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 99;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px 0 0 8px;
+    width: 30px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    transition: right 0.3s ease, background 0.3s ease;
+    padding: 0;
+}
+
+#toggleNrrdSidebar:hover {
+    background: rgba(76, 175, 80, 0.8);
+}
+
+#toggleNrrdSidebar.sidebar-collapsed {
+    right: 20px;
+}
+
+#collapseNrrdBtn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    transition: background 0.3s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+#collapseNrrdBtn:hover {
+    background: rgba(76, 175, 80, 0.6);
+}
+
+#nrrdFileInput {
+    display: none;
+}
+
+#nrrdFileInputLabel {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#nrrdFileInputLabel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
